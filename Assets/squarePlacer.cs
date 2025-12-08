@@ -1,3 +1,4 @@
+using Mono.Cecil.Cil;
 using System;
 using Unity.Mathematics;
 using UnityEngine;
@@ -14,6 +15,8 @@ public class squarePlacer : MonoBehaviour {
     private GameObject CellsHolderObject;
 
     public GameObject[,] CellsArray;
+
+    //private Vector3 tempMousePosition;
 
     // Start is called before the first frame update
     void Start () {
@@ -49,27 +52,47 @@ public class squarePlacer : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
-
+        //tempMousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
     }
 
     public void PlaceSquareAtMouseLocation(InputAction.CallbackContext context) {
         if (context.phase == InputActionPhase.Started) {
             Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-            PlaceSquareAtLocation(mousePosition.x, mousePosition.y);
+            PlaceSquareAtLocation(mousePosition.x / cellScale, mousePosition.y / cellScale);
         }
     }
 
-    public GameObject PlaceSquareAtLocation(float x, float y, bool addToArray = true) {
+    public GameObject PlaceSquareAtLocation (float x, float y, Color? color = null, bool addToArray = true) {
+        if (color == null) {
+            color = Color.white;
+        }
+
+        print("new------");
+
+        print($"{x}, {y}");
+
         x = math.round(x);
         y = math.round(y);
+
+        print($"{x}, {y}");
+
+
+        int gridValueX = (int) x + gridWidth / 2;
+        int gridValueY = (int) y + gridHeight / 2;
+
+        print($"{gridValueX}, {gridValueY}");
+
+
+        if (gridValueX >= gridWidth || gridValueY >= gridHeight) {
+            print($"Placed outside grid: ({gridValueX}, {gridValueY})");
+            return null;
+        }
 
         var position = new Vector2(x * cellScale, y * cellScale);
         var gameObject = new GameObject();
         var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
-        //spriteRenderer.color = Color.red;
-
-        //var sprite = Sprite.Create(texture, new Rect(0, 0, textureSize, textureSize), Vector2.zero);
+        spriteRenderer.color = (Color) color;
 
         var sprite = Resources.Load<Sprite>("Sprites/TestSquare1");
 
@@ -80,7 +103,7 @@ public class squarePlacer : MonoBehaviour {
         gameObject.name = "Cell";
 
         if (addToArray) {
-            CellsArray[(int) x + gridWidth / 2, (int) y + gridHeight / 2] = gameObject;
+            CellsArray[gridValueX, gridValueY] = gameObject;
         }
 
         return gameObject;
