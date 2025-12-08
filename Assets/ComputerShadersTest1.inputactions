@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "ComputerShadersTest1",
     "maps": [
         {
@@ -27,9 +28,9 @@
                     "name": "Fire",
                     "type": "Button",
                     "id": "b8dd8f24-6509-4c70-9d45-51db28f0c8ef",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Tap",
+                    "interactions": "Tap,Hold",
                     "initialStateCheck": false
                 }
             ],
