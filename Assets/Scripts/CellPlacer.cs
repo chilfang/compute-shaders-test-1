@@ -21,7 +21,7 @@ public class CellPlacer : MonoBehaviour {
         }
     }
 
-    public struct CellInfo {
+    public class CellInfo {
         public int gridX, gridY;
         public GameObject gameObject;
         public CellType cellType;
@@ -63,15 +63,15 @@ public class CellPlacer : MonoBehaviour {
 
     private System.Random random = new System.Random();
 
+    //brush stuff
     public int brushSize = 5;
+    public CellType brushType = CellType.Sand;
 
 
     //--------------------------------[[ Engine ]]--------------------------------
 
     void Start () {
         print("Scene builder started");
-
-        cellSize = cellSize - (cellSize % 2);
 
         cellSize = math.min(Screen.width, Screen.height) / math.min(gridWidth, gridHeight);
         cellSize = math.max(1, cellSize);
@@ -117,10 +117,9 @@ public class CellPlacer : MonoBehaviour {
                         break;
 
                     case CellType.Sand:
-                        if (y > 0) {
+                        if (y > 0 && CellsArray[x, y - 1].cellType == CellType.Air) {
                             SwapCells(x, y, x, y - 1);
                         }
-                        print("hi");
                         break;
                 }
             }
@@ -135,25 +134,62 @@ public class CellPlacer : MonoBehaviour {
             float x = mousePosition.x / cellScale;
             float y = mousePosition.y / cellScale;
 
-            
 
-            for (float brushX = (-brushSize / 2) + x; brushX < (brushSize / 2) + x; brushX++) {
-                for (float brushY = (-brushSize / 2) + y; brushY < (brushSize / 2) + y; brushY++) {
-                    CellInfo cell;
-                    try {
-                        cell = (CellInfo) GetCellAtLocation(brushX, brushY);
-                    }
-                    catch {
-                        return;
-                    }
+            if (brushSize == 1) {
+                CellInfo cell = GetCellAtLocation(x, y);
 
-                    SetCellToType(cell, CellType.Sand);
+                if (cell != null) {
+                    SetCellToType(cell, brushType);
+                }
+            } else {
+                for (float brushX = (-brushSize / 2) + x; brushX < (brushSize / 2) + x; brushX++) {
+                    for (float brushY = (-brushSize / 2) + y; brushY < (brushSize / 2) + y; brushY++) {
+                        if (random.Next(0, 100) < 75) { continue; }
+                        
+                        CellInfo cell = GetCellAtLocation(brushX, brushY);
+
+                        if (cell == null) { continue; }
+
+                        SetCellToType(cell, brushType);
+                    }
                 }
             }
         }
     }
 
+    public void OnValidate () {
+        print("hi");
+    }
+
     //--------------------------------[[ Functions ]]--------------------------------
+
+    //----------------[[ Inputs ]]----------------
+
+    public void OnClick (InputAction.CallbackContext context) {
+        if (context.phase == InputActionPhase.Started) {
+            holdingClick = true;
+        }
+        else if (context.phase == InputActionPhase.Canceled || (context.interaction is TapInteraction && context.phase == InputActionPhase.Performed)) {
+            holdingClick = false;
+        }
+    }
+
+    public void BrushSlider (Single value) {
+        ChangeBrushSize((int) value);
+    }
+
+    //----------------[[ Settings stuff ]]----------------
+
+    public void ChangeBrushSize (int newBrushSize) {
+        brushSize = math.max(1, newBrushSize);
+    }
+
+    public void SwitchBrushToElement (CellType cellType) {
+        brushType = cellType;
+        print($"Switch to {cellType}");
+    }
+
+    //----------------[[ Grid Stuff ]]----------------
 
     public GridPositionInfo ConvertScaledWorldToGrid (float x, float y) {
         x = math.round(x);
@@ -162,38 +198,30 @@ public class CellPlacer : MonoBehaviour {
         return new GridPositionInfo(x, y, (int) x + (gridWidth / 2), (int) y + (gridHeight / 2));
     }
 
-    public void OnClick (InputAction.CallbackContext context) {
-        if (context.phase == InputActionPhase.Started) {
-            holdingClick = true;
-        } else if (context.phase == InputActionPhase.Canceled || (context.interaction is TapInteraction && context.phase == InputActionPhase.Performed)) {
-            holdingClick = false;
-        }
-    }
-
-    public CellInfo? GetCellAtLocation (float _x, float _y) {
+    public CellInfo GetCellAtLocation (float _x, float _y) {
         var gridPositions = ConvertScaledWorldToGrid(_x, _y);
 
         int gridX = gridPositions.gridX;
         int gridY = gridPositions.gridY;
 
-        if (gridX >= gridWidth || gridY >= gridHeight) {
+        if ((gridX >= gridWidth || gridY >= gridHeight) || (gridX < 0 || gridY < 0)) {
             //print($"Attempt to get outside grid: ({gridX}, {gridY})");
             return null;
         }
 
-        CellInfo? cell;
+        CellInfo cell;
 
         try {
             cell = CellsArray[gridX, gridY];
-        } catch (NullReferenceException e) {
-            print($"Null reference at ({gridX}, {gridY}) | THIS SHOULD NOT HAPPEN");
+        } catch {
+            print($"Null reference(?) at ({gridX}, {gridY}) | THIS SHOULD NOT HAPPEN");
             cell = PlaceCellAtLocation(_x, _y);
         }
 
         return cell;
     }
 
-    public CellInfo? PlaceCellAtLocation (float _x, float _y, Color? color = null) {
+    public CellInfo PlaceCellAtLocation (float _x, float _y, Color? color = null) {
         if (color == null) {
             color = Color.white;
         }
@@ -211,9 +239,9 @@ public class CellPlacer : MonoBehaviour {
             return null;
         }
 
-        var position = new Vector2(x * cellScale, y * cellScale);
-        var gameObject = new GameObject();
-        var spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+        Vector2 position = new Vector2(x * cellScale, y * cellScale);
+        GameObject gameObject = new GameObject();
+        SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
         spriteRenderer.color = (Color) color;
 
         var sprite = Resources.Load<Sprite>("Sprites/TestSquare1");
@@ -244,7 +272,7 @@ public class CellPlacer : MonoBehaviour {
                 break;
 
             case CellType.Stone:
-                cell.cellType = CellType.Air;
+                cell.cellType = CellType.Stone;
                 cell.spriteRenderer.color = Color.gray;
                 break;
 
